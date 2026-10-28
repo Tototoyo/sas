@@ -1,0 +1,6 @@
+{
+  "name": "The Hideaway: Hostel Management",
+  "description": "Internal hostel management system for The Hideaway. Manage properties, rooms, beds, bookings, staff credentials, bonus logic, utilities, activities, and admin master access control.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

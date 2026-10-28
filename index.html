@@ -1,0 +1,90 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Hideaway: Hostel Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0"
+  }
+}
+</script>
+<style>
+    .capture-me {
+        display: block !important;
+        position: absolute !important;
+        left: -9999px !important;
+        top: -9999px !important;
+        visibility: visible !important;
+    }
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      .printable-area, .printable-area * {
+        visibility: visible;
+      }
+      .printable-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        padding: 1rem;
+      }
+    }
+    
+    /* Google Translate Widget Styling */
+    #google_translate_element {
+        line-height: 1; /* To help vertical alignment */
+    }
+    .goog-te-gadget-simple {
+        background-color: #fff !important;
+        border: 1px solid #cbd5e1 !important; /* slate-300 */
+        border-radius: 0.375rem !important; /* rounded-md */
+        padding: 0.25rem 0.5rem !important; /* similar to py-1 px-2 */
+        font-size: 0.875rem !important; /* text-sm */
+        line-height: 1.25rem !important; /* text-sm */
+        color: #334155 !important; /* slate-700 */
+        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); /* shadow-sm */
+        cursor: pointer;
+        margin: 0 !important;
+        display: inline-block;
+    }
+    .goog-te-gadget-simple .goog-te-menu-value {
+        color: #334155 !important;
+        text-decoration: none !important;
+    }
+    .goog-te-gadget-simple .goog-te-menu-value span {
+        border-left: none !important;
+    }
+    .goog-te-gadget-icon {
+        display: none !important;
+    }
+    /* Hide Google's top bar */
+    iframe.goog-te-banner-frame {
+        display: none !important;
+    }
+    body {
+        top: 0px !important;
+    }
+</style>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-slate-100">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    <script type="text/javascript">
+      function googleTranslateElementInit() {
+        new google.translate.TranslateElement({pageLanguage: 'en', includedLanguages: 'en,th', layout: google.translate.TranslateElement.InlineLayout.SIMPLE}, 'google_translate_element');
+      }
+    </script>
+  </body>
+</html>
