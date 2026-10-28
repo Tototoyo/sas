@@ -6,12 +6,9 @@ import RoomManagement from './components/RoomManagement';
 import { ActivitiesManagement } from './components/activities/ActivitiesManagement';
 import WalkInManagement from './components/WalkInManagement';
 import Modal from './components/Modal';
-import { SupabaseModal } from './components/SupabaseModal';
-import { getSupabaseConfig } from './lib/supabase';
-import { fetchAllFromSupabase, syncEntityToSupabase, deleteEntityFromSupabase, AllHostelData } from './services/supabaseService';
 import type { Staff, Shift, Task, UtilityRecord, Room, Bed, Absence, Activity, SpeedBoatTrip, Booking, Extra, SalaryAdvance, Bonus, TaxiBoatOption, ExternalSale, PlatformPayment, WalkInGuest, AccommodationBooking, PaymentType } from './types';
 import { EntityCondition, TaskStatus, BedStatus, Role, PaymentStatus } from './types';
-import { KeyIcon, LockClosedIcon, ShieldCheckIcon, ArrowRightOnRectangleIcon, EyeIcon, EyeSlashIcon, UserCircleIcon, CircleStackIcon } from './constants';
+import { KeyIcon, LockClosedIcon, ShieldCheckIcon, ArrowRightOnRectangleIcon, EyeIcon, EyeSlashIcon, UserCircleIcon } from './constants';
 
 export interface AuthSession {
   role: Role;
@@ -375,11 +372,7 @@ const App: React.FC = () => {
 
     setAdminMasterPassword(newPasswordInput);
     localStorage.setItem('hideaway_master_password', newPasswordInput);
-    syncEntityToSupabase('system_config', {
-      key: 'admin_master_password',
-      value: JSON.stringify(newPasswordInput),
-    });
-    setChangePasswordSuccess('Master Admin Password successfully updated and synced to Supabase!');
+    setChangePasswordSuccess('Master Admin Password successfully updated!');
     setTimeout(() => {
       setIsChangePasswordModalOpen(false);
       setCurrentPasswordInput('');
@@ -408,75 +401,6 @@ const App: React.FC = () => {
   const [accommodationBookings, setAccommodationBookings] = useState<AccommodationBooking[]>(MOCK_ACCOMMODATION_BOOKINGS_DATA);
   const [paymentTypes, setPaymentTypes] = useState<PaymentType[]>(MOCK_PAYMENT_TYPES);
 
-  // Supabase State & Auto-hydration
-  const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
-  const [supabaseConfig, setSupabaseConfig] = useState(getSupabaseConfig());
-  const [isSupabaseLoading, setIsSupabaseLoading] = useState(false);
-
-  const refreshFromSupabase = async () => {
-    const conf = getSupabaseConfig();
-    setSupabaseConfig(conf);
-    if (!conf.isConfigured) return;
-
-    setIsSupabaseLoading(true);
-    try {
-      const data = await fetchAllFromSupabase();
-      if (data) {
-        if (data.staff && data.staff.length > 0) setStaff(data.staff);
-        if (data.shifts && data.shifts.length > 0) setShifts(data.shifts);
-        if (data.tasks && data.tasks.length > 0) setTasks(data.tasks);
-        if (data.absences && data.absences.length > 0) setAbsences(data.absences);
-        if (data.salaryAdvances && data.salaryAdvances.length > 0) setSalaryAdvances(data.salaryAdvances);
-        if (data.bonuses && data.bonuses.length > 0) setBonuses(data.bonuses);
-        if (data.rooms && data.rooms.length > 0) setRooms(data.rooms);
-        if (data.walkInGuests && data.walkInGuests.length > 0) setWalkInGuests(data.walkInGuests);
-        if (data.accommodationBookings && data.accommodationBookings.length > 0) setAccommodationBookings(data.accommodationBookings);
-        if (data.activities && data.activities.length > 0) setActivities(data.activities);
-        if (data.speedBoatTrips && data.speedBoatTrips.length > 0) setSpeedBoatTrips(data.speedBoatTrips);
-        if (data.taxiBoatOptions && data.taxiBoatOptions.length > 0) setTaxiBoatOptions(data.taxiBoatOptions);
-        if (data.extras && data.extras.length > 0) setExtras(data.extras);
-        if (data.bookings && data.bookings.length > 0) setBookings(data.bookings);
-        if (data.utilityRecords && data.utilityRecords.length > 0) setUtilityRecords(data.utilityRecords);
-        if (data.externalSales && data.externalSales.length > 0) setExternalSales(data.externalSales);
-        if (data.platformPayments && data.platformPayments.length > 0) setPlatformPayments(data.platformPayments);
-        if (data.adminMasterPassword) setAdminMasterPassword(data.adminMasterPassword);
-      }
-    } catch (err) {
-      console.warn('Initial Supabase fetch error:', err);
-    } finally {
-      setIsSupabaseLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    refreshFromSupabase();
-  }, []);
-
-  const allCurrentData: AllHostelData = useMemo(() => ({
-    staff,
-    shifts,
-    tasks,
-    absences,
-    salaryAdvances,
-    bonuses,
-    rooms,
-    walkInGuests,
-    accommodationBookings,
-    activities,
-    speedBoatTrips,
-    taxiBoatOptions,
-    extras,
-    bookings,
-    utilityRecords,
-    externalSales,
-    platformPayments,
-    adminMasterPassword,
-  }), [
-    staff, shifts, tasks, absences, salaryAdvances, bonuses, rooms,
-    walkInGuests, accommodationBookings, activities, speedBoatTrips,
-    taxiBoatOptions, extras, bookings, utilityRecords, externalSales,
-    platformPayments, adminMasterPassword,
-  ]);
 
   // Helper for ID generation
   const generateId = () => `id_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -669,362 +593,70 @@ const App: React.FC = () => {
 
 
   // CRUD Handlers for Staff
-  const handleAddStaff = (newStaff: Omit<Staff, 'id'>) => {
-    const created: Staff = { ...newStaff, id: generateId() };
-    setStaff(prev => [...prev, created]);
-    syncEntityToSupabase('staff_members', {
-      id: created.id,
-      name: created.name,
-      role: created.role,
-      salary: created.salary,
-      contact: created.contact || '',
-      employee_id: created.employeeId,
-      login_id: created.loginId || created.employeeId.toLowerCase(),
-      password: created.password || 'staff123',
-    });
-  };
-
-  const handleUpdateStaff = (updatedStaff: Staff) => {
-    setStaff(prev => prev.map(s => s.id === updatedStaff.id ? updatedStaff : s));
-    syncEntityToSupabase('staff_members', {
-      id: updatedStaff.id,
-      name: updatedStaff.name,
-      role: updatedStaff.role,
-      salary: updatedStaff.salary,
-      contact: updatedStaff.contact || '',
-      employee_id: updatedStaff.employeeId,
-      login_id: updatedStaff.loginId || updatedStaff.employeeId.toLowerCase(),
-      password: updatedStaff.password || 'staff123',
-    });
-  };
-
-  const handleDeleteStaff = (staffId: string) => {
-    setStaff(prev => prev.filter(s => s.id !== staffId));
-    deleteEntityFromSupabase('staff_members', staffId);
-  };
+  const handleAddStaff = (newStaff: Omit<Staff, 'id'>) => setStaff([...staff, { ...newStaff, id: generateId() }]);
+  const handleUpdateStaff = (updatedStaff: Staff) => setStaff(staff.map(s => s.id === updatedStaff.id ? updatedStaff : s));
+  const handleDeleteStaff = (staffId: string) => setStaff(staff.filter(s => s.id !== staffId));
 
   // CRUD Handlers for Tasks
-  const handleAddTask = (newTask: Omit<Task, 'id'>) => {
-    const created: Task = { ...newTask, id: generateId() };
-    setTasks(prev => [...prev, created]);
-    syncEntityToSupabase('staff_tasks', {
-      id: created.id,
-      description: created.description,
-      assigned_to: created.assignedTo || null,
-      due_date: created.dueDate,
-      status: created.status,
-    });
-  };
-
-  const handleUpdateTask = (updatedTask: Task) => {
-    setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
-    syncEntityToSupabase('staff_tasks', {
-      id: updatedTask.id,
-      description: updatedTask.description,
-      assigned_to: updatedTask.assignedTo || null,
-      due_date: updatedTask.dueDate,
-      status: updatedTask.status,
-    });
-  };
-
-  const handleDeleteTask = (taskId: string) => {
-    setTasks(prev => prev.filter(t => t.id !== taskId));
-    deleteEntityFromSupabase('staff_tasks', taskId);
-  };
+  const handleAddTask = (newTask: Omit<Task, 'id'>) => setTasks([...tasks, { ...newTask, id: generateId() }]);
+  const handleUpdateTask = (updatedTask: Task) => setTasks(tasks.map(t => t.id === updatedTask.id ? updatedTask : t));
+  const handleDeleteTask = (taskId: string) => setTasks(tasks.filter(t => t.id !== taskId));
 
   // CRUD Handlers for Utilities
-  const handleAddUtilityRecord = (newRecord: Omit<UtilityRecord, 'id'>) => {
-    const created: UtilityRecord = { ...newRecord, id: generateId() };
-    setUtilityRecords(prev => [...prev, created]);
-    syncEntityToSupabase('utility_records', {
-      id: created.id,
-      utility_type: created.utilityType,
-      date: created.date,
-      cost: created.cost,
-      bill_image: created.billImage || '',
-    });
-  };
-
-  const handleUpdateUtilityRecord = (updatedRecord: UtilityRecord) => {
-    setUtilityRecords(prev => prev.map(u => u.id === updatedRecord.id ? updatedRecord : u));
-    syncEntityToSupabase('utility_records', {
-      id: updatedRecord.id,
-      utility_type: updatedRecord.utilityType,
-      date: updatedRecord.date,
-      cost: updatedRecord.cost,
-      bill_image: updatedRecord.billImage || '',
-    });
-  };
-
-  const handleDeleteUtilityRecord = (recordId: string) => {
-    setUtilityRecords(prev => prev.filter(u => u.id !== recordId));
-    deleteEntityFromSupabase('utility_records', recordId);
-  };
+  const handleAddUtilityRecord = (newRecord: Omit<UtilityRecord, 'id'>) => setUtilityRecords([...utilityRecords, { ...newRecord, id: generateId() }]);
+  const handleUpdateUtilityRecord = (updatedRecord: UtilityRecord) => setUtilityRecords(utilityRecords.map(u => u.id === updatedRecord.id ? updatedRecord : u));
+  const handleDeleteUtilityRecord = (recordId: string) => setUtilityRecords(utilityRecords.filter(u => u.id !== recordId));
   
   // CRUD Handlers for Utility Categories
   const handleAddUtilityCategory = (newCategory: string) => {
     if (newCategory && !utilityCategories.map(c => c.toLowerCase()).includes(newCategory.toLowerCase())) {
-        setUtilityCategories(prev => [...prev, newCategory].sort());
+        setUtilityCategories([...utilityCategories, newCategory].sort());
     }
   };
-
   const handleDeleteUtilityCategory = (categoryToDelete: string) => {
-      setUtilityCategories(prev => prev.filter(c => c !== categoryToDelete));
+      setUtilityCategories(utilityCategories.filter(c => c !== categoryToDelete));
   };
 
   // CRUD Handlers for Rooms
-  const handleAddRoom = (newRoom: Omit<Room, 'id'>) => {
-    const created: Room = { ...newRoom, id: generateId() };
-    setRooms(prev => [...prev, created]);
-    syncEntityToSupabase('rooms', {
-      id: created.id,
-      name: created.name,
-      condition: created.condition,
-      maintenance_notes: created.maintenanceNotes || '',
-      beds: created.beds || [],
-    });
-  };
-
-  const handleUpdateRoom = (updatedRoom: Room) => {
-    setRooms(prev => prev.map(r => r.id === updatedRoom.id ? updatedRoom : r));
-    syncEntityToSupabase('rooms', {
-      id: updatedRoom.id,
-      name: updatedRoom.name,
-      condition: updatedRoom.condition,
-      maintenance_notes: updatedRoom.maintenanceNotes || '',
-      beds: updatedRoom.beds || [],
-    });
-  };
-
-  const handleDeleteRoom = (roomId: string) => {
-    setRooms(prev => prev.filter(r => r.id !== roomId));
-    deleteEntityFromSupabase('rooms', roomId);
-  };
+  const handleAddRoom = (newRoom: Omit<Room, 'id'>) => setRooms([...rooms, { ...newRoom, id: generateId() }]);
+  const handleUpdateRoom = (updatedRoom: Room) => setRooms(rooms.map(r => r.id === updatedRoom.id ? updatedRoom : r));
+  const handleDeleteRoom = (roomId: string) => setRooms(rooms.filter(r => r.id !== roomId));
   
   // CRUD Handlers for Absences
-  const handleAddAbsence = (newAbsence: Omit<Absence, 'id'>) => {
-    const created: Absence = { ...newAbsence, id: generateId() };
-    setAbsences(prev => [...prev, created]);
-    syncEntityToSupabase('staff_absences', {
-      id: created.id,
-      staff_id: created.staffId,
-      date: created.date,
-      reason: created.reason || '',
-    });
-  };
-
-  const handleUpdateAbsence = (updatedAbsence: Absence) => {
-    setAbsences(prev => prev.map(a => a.id === updatedAbsence.id ? updatedAbsence : a));
-    syncEntityToSupabase('staff_absences', {
-      id: updatedAbsence.id,
-      staff_id: updatedAbsence.staffId,
-      date: updatedAbsence.date,
-      reason: updatedAbsence.reason || '',
-    });
-  };
-
-  const handleDeleteAbsence = (absenceId: string) => {
-    setAbsences(prev => prev.filter(a => a.id !== absenceId));
-    deleteEntityFromSupabase('staff_absences', absenceId);
-  };
+  const handleAddAbsence = (newAbsence: Omit<Absence, 'id'>) => setAbsences([...absences, { ...newAbsence, id: generateId() }]);
+  const handleUpdateAbsence = (updatedAbsence: Absence) => setAbsences(absences.map(a => a.id === updatedAbsence.id ? updatedAbsence : a));
+  const handleDeleteAbsence = (absenceId: string) => setAbsences(absences.filter(a => a.id !== absenceId));
 
   // CRUD Handlers for Salary Advances
-  const handleAddSalaryAdvance = (newAdvance: Omit<SalaryAdvance, 'id'>) => {
-    const created: SalaryAdvance = { ...newAdvance, id: generateId() };
-    setSalaryAdvances(prev => [...prev, created]);
-    syncEntityToSupabase('staff_advances', {
-      id: created.id,
-      staff_id: created.staffId,
-      date: created.date,
-      amount: created.amount,
-      reason: created.reason || '',
-    });
-  };
-
-  const handleUpdateSalaryAdvance = (updatedAdvance: SalaryAdvance) => {
-    setSalaryAdvances(prev => prev.map(a => a.id === updatedAdvance.id ? updatedAdvance : a));
-    syncEntityToSupabase('staff_advances', {
-      id: updatedAdvance.id,
-      staff_id: updatedAdvance.staffId,
-      date: updatedAdvance.date,
-      amount: updatedAdvance.amount,
-      reason: updatedAdvance.reason || '',
-    });
-  };
-
-  const handleDeleteSalaryAdvance = (advanceId: string) => {
-    setSalaryAdvances(prev => prev.filter(a => a.id !== advanceId));
-    deleteEntityFromSupabase('staff_advances', advanceId);
-  };
+  const handleAddSalaryAdvance = (newAdvance: Omit<SalaryAdvance, 'id'>) => setSalaryAdvances([...salaryAdvances, { ...newAdvance, id: generateId() }]);
+  const handleUpdateSalaryAdvance = (updatedAdvance: SalaryAdvance) => setSalaryAdvances(salaryAdvances.map(a => a.id === updatedAdvance.id ? updatedAdvance : a));
+  const handleDeleteSalaryAdvance = (advanceId: string) => setSalaryAdvances(salaryAdvances.filter(a => a.id !== advanceId));
 
   // CRUD Handlers for Staff Bonuses
-  const handleAddBonus = (newBonus: Omit<Bonus, 'id'>) => {
-    const created: Bonus = { ...newBonus, id: generateId() };
-    setBonuses(prev => [...prev, created]);
-    syncEntityToSupabase('staff_bonuses', {
-      id: created.id,
-      staff_id: created.staffId,
-      date: created.date,
-      amount: created.amount,
-      reason: created.reason || '',
-    });
-  };
-
-  const handleUpdateBonus = (updatedBonus: Bonus) => {
-    setBonuses(prev => prev.map(b => b.id === updatedBonus.id ? updatedBonus : b));
-    syncEntityToSupabase('staff_bonuses', {
-      id: updatedBonus.id,
-      staff_id: updatedBonus.staffId,
-      date: updatedBonus.date,
-      amount: updatedBonus.amount,
-      reason: updatedBonus.reason || '',
-    });
-  };
-
-  const handleDeleteBonus = (bonusId: string) => {
-    setBonuses(prev => prev.filter(b => b.id !== bonusId));
-    deleteEntityFromSupabase('staff_bonuses', bonusId);
-  };
+  const handleAddBonus = (newBonus: Omit<Bonus, 'id'>) => setBonuses([...bonuses, { ...newBonus, id: generateId() }]);
+  const handleUpdateBonus = (updatedBonus: Bonus) => setBonuses(bonuses.map(b => b.id === updatedBonus.id ? updatedBonus : b));
+  const handleDeleteBonus = (bonusId: string) => setBonuses(bonuses.filter(b => b.id !== bonusId));
   
   // CRUD Handlers for External Sales
-  const handleAddExternalSale = (newSale: Omit<ExternalSale, 'id'>) => {
-    const created: ExternalSale = { ...newSale, id: generateId() };
-    setExternalSales(prev => [...prev, created]);
-    syncEntityToSupabase('external_sales', {
-      id: created.id,
-      date: created.date,
-      amount: created.amount,
-      description: created.description || '',
-    });
-  };
-
-  const handleUpdateExternalSale = (updatedSale: ExternalSale) => {
-    setExternalSales(prev => prev.map(s => s.id === updatedSale.id ? updatedSale : s));
-    syncEntityToSupabase('external_sales', {
-      id: updatedSale.id,
-      date: updatedSale.date,
-      amount: updatedSale.amount,
-      description: updatedSale.description || '',
-    });
-  };
-
-  const handleDeleteExternalSale = (saleId: string) => {
-    setExternalSales(prev => prev.filter(s => s.id !== saleId));
-    deleteEntityFromSupabase('external_sales', saleId);
-  };
+  const handleAddExternalSale = (newSale: Omit<ExternalSale, 'id'>) => setExternalSales([...externalSales, { ...newSale, id: generateId() }]);
+  const handleUpdateExternalSale = (updatedSale: ExternalSale) => setExternalSales(externalSales.map(s => s.id === updatedSale.id ? updatedSale : s));
+  // Fix: Corrected the handleDeleteExternalSale to use externalSales.filter instead of a non-existent global filter function.
+  const handleDeleteExternalSale = (saleId: string) => setExternalSales(externalSales.filter(s => s.id !== saleId));
   
   // CRUD Handlers for Platform Payments
-  const handleAddPlatformPayment = (newPayment: Omit<PlatformPayment, 'id'>) => {
-    const created: PlatformPayment = { ...newPayment, id: generateId() };
-    setPlatformPayments(prev => [...prev, created]);
-    syncEntityToSupabase('platform_payments', {
-      id: created.id,
-      date: created.date,
-      platform: created.platform,
-      amount: created.amount,
-      booking_reference: created.bookingReference || '',
-    });
-  };
-
-  const handleUpdatePlatformPayment = (updatedPayment: PlatformPayment) => {
-    setPlatformPayments(prev => prev.map(p => p.id === updatedPayment.id ? updatedPayment : p));
-    syncEntityToSupabase('platform_payments', {
-      id: updatedPayment.id,
-      date: updatedPayment.date,
-      platform: updatedPayment.platform,
-      amount: updatedPayment.amount,
-      booking_reference: updatedPayment.bookingReference || '',
-    });
-  };
-
-  const handleDeletePlatformPayment = (paymentId: string) => {
-    setPlatformPayments(prev => prev.filter(p => p.id !== paymentId));
-    deleteEntityFromSupabase('platform_payments', paymentId);
-  };
+  const handleAddPlatformPayment = (newPayment: Omit<PlatformPayment, 'id'>) => setPlatformPayments([...platformPayments, { ...newPayment, id: generateId() }]);
+  const handleUpdatePlatformPayment = (updatedPayment: PlatformPayment) => setPlatformPayments(platformPayments.map(p => p.id === updatedPayment.id ? updatedPayment : p));
+  const handleDeletePlatformPayment = (paymentId: string) => setPlatformPayments(platformPayments.filter(p => p.id !== paymentId));
 
   // CRUD Handlers for Walk-in Guests
-  const handleAddWalkInGuest = (newGuest: Omit<WalkInGuest, 'id'>) => {
-    const created: WalkInGuest = { ...newGuest, id: generateId() };
-    setWalkInGuests(prev => [...prev, created]);
-    syncEntityToSupabase('walk_in_guests', {
-      id: created.id,
-      guest_name: created.guestName,
-      room_id: created.roomId || null,
-      bed_number: created.bedNumber || null,
-      check_in_date: created.checkInDate,
-      number_of_nights: created.numberOfNights,
-      price_per_night: created.pricePerNight,
-      amount_paid: created.amountPaid,
-      payment_method: created.paymentMethod,
-      nationality: created.nationality || '',
-      id_number: created.idNumber || '',
-      notes: created.notes || '',
-      status: created.status,
-    });
-  };
-
-  const handleUpdateWalkInGuest = (updatedGuest: WalkInGuest) => {
-    setWalkInGuests(prev => prev.map(g => g.id === updatedGuest.id ? updatedGuest : g));
-    syncEntityToSupabase('walk_in_guests', {
-      id: updatedGuest.id,
-      guest_name: updatedGuest.guestName,
-      room_id: updatedGuest.roomId || null,
-      bed_number: updatedGuest.bedNumber || null,
-      check_in_date: updatedGuest.checkInDate,
-      number_of_nights: updatedGuest.numberOfNights,
-      price_per_night: updatedGuest.pricePerNight,
-      amount_paid: updatedGuest.amountPaid,
-      payment_method: updatedGuest.paymentMethod,
-      nationality: updatedGuest.nationality || '',
-      id_number: updatedGuest.idNumber || '',
-      notes: updatedGuest.notes || '',
-      status: updatedGuest.status,
-    });
-  };
-
-  const handleDeleteWalkInGuest = (guestId: string) => {
-    setWalkInGuests(prev => prev.filter(g => g.id !== guestId));
-    deleteEntityFromSupabase('walk_in_guests', guestId);
-  };
+  const handleAddWalkInGuest = (newGuest: Omit<WalkInGuest, 'id'>) => setWalkInGuests([...walkInGuests, { ...newGuest, id: generateId() }]);
+  const handleUpdateWalkInGuest = (updatedGuest: WalkInGuest) => setWalkInGuests(walkInGuests.map(g => g.id === updatedGuest.id ? updatedGuest : g));
+  const handleDeleteWalkInGuest = (guestId: string) => setWalkInGuests(walkInGuests.filter(g => g.id !== guestId));
   
   // CRUD Handlers for Accommodation Bookings
-  const handleAddAccommodationBooking = (newBooking: Omit<AccommodationBooking, 'id'>) => {
-    const created: AccommodationBooking = { ...newBooking, id: generateId() };
-    setAccommodationBookings(prev => [...prev, created]);
-    syncEntityToSupabase('accommodation_bookings', {
-      id: created.id,
-      guest_name: created.guestName,
-      platform: created.platform,
-      room_id: created.roomId || null,
-      bed_number: created.bedNumber || null,
-      check_in_date: created.checkInDate,
-      number_of_nights: created.numberOfNights,
-      total_price: created.totalPrice,
-      amount_paid: created.amountPaid,
-      status: created.status,
-    });
-  };
-
-  const handleUpdateAccommodationBooking = (updatedBooking: AccommodationBooking) => {
-    setAccommodationBookings(prev => prev.map(b => b.id === updatedBooking.id ? updatedBooking : b));
-    syncEntityToSupabase('accommodation_bookings', {
-      id: updatedBooking.id,
-      guest_name: updatedBooking.guestName,
-      platform: updatedBooking.platform,
-      room_id: updatedBooking.roomId || null,
-      bed_number: updatedBooking.bedNumber || null,
-      check_in_date: updatedBooking.checkInDate,
-      number_of_nights: updatedBooking.numberOfNights,
-      total_price: updatedBooking.totalPrice,
-      amount_paid: updatedBooking.amountPaid,
-      status: updatedBooking.status,
-    });
-  };
-
-  const handleDeleteAccommodationBooking = (bookingId: string) => {
-    setAccommodationBookings(prev => prev.filter(b => b.id !== bookingId));
-    deleteEntityFromSupabase('accommodation_bookings', bookingId);
-  };
+  const handleAddAccommodationBooking = (newBooking: Omit<AccommodationBooking, 'id'>) => setAccommodationBookings([...accommodationBookings, { ...newBooking, id: generateId() }]);
+  const handleUpdateAccommodationBooking = (updatedBooking: AccommodationBooking) => setAccommodationBookings(accommodationBookings.map(b => b.id === updatedBooking.id ? updatedBooking : b));
+  const handleDeleteAccommodationBooking = (bookingId: string) => setAccommodationBookings(accommodationBookings.filter(b => b.id !== bookingId));
 
   // CRUD Handlers for Speed Boat Trips
   const handleAddSpeedBoatTrip = (newTrip: Omit<SpeedBoatTrip, 'id'>) => setSpeedBoatTrips([...speedBoatTrips, { ...newTrip, id: generateId() }]);
@@ -1431,21 +1063,6 @@ const App: React.FC = () => {
                       </button>
                     )}
 
-                    {/* Supabase Connection & Cloud Sync Button */}
-                    <button
-                      type="button"
-                      onClick={() => setIsSupabaseModalOpen(true)}
-                      className={`flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border shadow-sm transition-colors ${
-                        supabaseConfig.isConfigured
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100'
-                          : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
-                      }`}
-                      title="Supabase Database Connection & Cloud Sync"
-                    >
-                      <CircleStackIcon className={`w-3.5 h-3.5 ${isSupabaseLoading ? 'animate-spin' : ''}`} />
-                      <span>{supabaseConfig.isConfigured ? 'Supabase: Connected' : 'Connect Supabase'}</span>
-                    </button>
-
                     {/* Logout Button */}
                     <button
                       type="button"
@@ -1572,17 +1189,6 @@ const App: React.FC = () => {
           </div>
         </form>
       </Modal>
- 
-      {/* Supabase Database Sync & Setup Modal */}
-      <SupabaseModal
-        isOpen={isSupabaseModalOpen}
-        onClose={() => {
-          setIsSupabaseModalOpen(false);
-          refreshFromSupabase();
-        }}
-        allCurrentData={allCurrentData}
-        onDataSynced={refreshFromSupabase}
-      />
 
       <main className="py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
