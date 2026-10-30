@@ -13,12 +13,14 @@ const STORAGE_KEY_KEY = 'hideaway_supabase_anon_key';
 export function getSupabaseConfig(): SupabaseConfig {
   const envUrl = (
     (import.meta.env.VITE_SUPABASE_URL as string | undefined) ||
-    ((import.meta.env as any).NEXT_PUBLIC_SUPABASE_URL as string | undefined)
+    ((import.meta.env as any).NEXT_PUBLIC_SUPABASE_URL as string | undefined) ||
+    (typeof process !== 'undefined' && process.env ? (process.env.SUPABASE_URL || (process.env as any).VITE_SUPABASE_URL) : undefined)
   )?.trim();
 
   const envKey = (
     (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ||
-    ((import.meta.env as any).NEXT_PUBLIC_SUPABASE_ANON_KEY as string | undefined)
+    ((import.meta.env as any).NEXT_PUBLIC_SUPABASE_ANON_KEY as string | undefined) ||
+    (typeof process !== 'undefined' && process.env ? (process.env.SUPABASE_ANON_KEY || (process.env as any).VITE_SUPABASE_ANON_KEY) : undefined)
   )?.trim();
 
   const customUrl = localStorage.getItem(STORAGE_KEY_URL)?.trim();
